@@ -11,7 +11,13 @@ from tqdm import tqdm_notebook as tqdm
 def comparison_test(data_dicts,input_set,
                     envdir='env_dir',
                     stagedir='staging',
+                    is_windows=False,
                     verbose=False):
+    python_path = 'bin/python'
+    slash = '/'
+    if is_windows:
+        python_path = 'Scripts\python.exe'
+        slash = '\\'
     if os.path.exists(envdir):
         shutil.rmtree(envdir)
     os.makedirs(envdir)
@@ -23,24 +29,25 @@ def comparison_test(data_dicts,input_set,
         print(solution)
         output_set[solution] = {}
         #create venv for all solutions and fill it with the requirements
-        solution_env = '%s/%s_env' % (envdir,solution)
+        solution_env = slash.join([envdir,solution])
+        solution_python_executor = slash.join([solution_env,python_path])
         subprocess.call(['python','-m','venv',solution_env])
-        subprocess.call(['%s/bin/python' % solution_env,'-m',
+        subprocess.call([solution_python_executor,'-m',
                          'pip','install','-r','solutions/%s/requirements.txt' % solution])
         
         for data_name,data_dic in tqdm(data_dicts.items()):
             output_set[solution][data_name] = {}
             #create data.json file and run ETL
-            data_dic['solution_folder'] = 'solutions/%s' % solution
-            data_dic['solution_env'] = solution_env
+            data_dic['solution_folder'] = slash.join(['solutions',solution])
+            data_dic['solution_python_executor'] = solution_python_executor
             if os.path.exists(stagedir):
                 shutil.rmtree(stagedir)
             os.makedirs(stagedir)
             json.dump(data_dic,open('data.json','w'))
             if verbose:
                 print('Starting ETL process')
-            etl_proc = subprocess.Popen(['%s/bin/python' % solution_env,
-                            'solutions/%s/ETL.py' % solution],stdout=subprocess.PIPE)
+            etl_proc = subprocess.Popen([solution_python_executor,
+                            slash.join(['solutions',solution,'ETL.py'])],stdout=subprocess.PIPE)
             if verbose:
                 print('ETL process started')
           
@@ -54,8 +61,8 @@ def comparison_test(data_dicts,input_set,
                 for input_dic in input_dictlist:
                     json.dump(input_dic,open('input.json','w'))
                     start_time = time.time()
-                    subprocess.call(['%s/bin/python' % solution_env,
-                            'solutions/%s/process.py' % solution])
+                    subprocess.call([solution_python_executor,
+                            slash.join(['solutions',solution,'process.py'])])
                     calc_time = time.time() - start_time
                     timedata.append({'calc_time':calc_time,
                                     'input_id':input_name,
@@ -70,8 +77,8 @@ def comparison_test(data_dicts,input_set,
             try:
                 if verbose:
                     print('Starting cleanup process')
-                clean_proc = subprocess.Popen(['%s/bin/python' % solution_env,
-                                'solutions/%s/cleanup.py' % solution])
+                clean_proc = subprocess.Popen([solution_python_executor,
+                                slash.join(['solutions',solution,'cleanup.py'])])
                 if verbose:
                     print('cleanup process started')
               
