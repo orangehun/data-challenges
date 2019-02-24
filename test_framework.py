@@ -70,9 +70,16 @@ def comparison_test(data_dicts,input_set,
                 output_set[solution][data_name][input_name] = []
                 for input_dic in input_dictlist:
                     json.dump(input_dic,open('input.json','w'))
-                    start_time = time.time()
-                    subprocess.call([solution_python_executor,
-                            slash.join(['solutions',solution,'process.py'])])
+                    start_time = time.time()                    
+                    _proc = subprocess.Popen([solution_python_executor,
+                            slash.join(['solutions',solution,'process.py'])],
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+                    _proc.wait()
+                    (_stdout, _stderr) = _proc.communicate()
+                    if _proc.returncode != 0:
+                        print(_stderr.decode('utf-8'))
+                        raise(RuntimeError)
                     calc_time = time.time() - start_time
                     timedata.append({'calc_time':calc_time,
                                     'input_id':input_name,
