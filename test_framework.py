@@ -23,6 +23,7 @@ def comparison_test(data_dicts,input_set,
     os.makedirs(envdir)
     solutions = next(os.walk('solutions'))[1]
     solutions.sort()
+    solutions = [s for s in solutions if (not s.startswith('.'))]
     timedata = []
     output_set = {}
     for solution in tqdm(solutions):
@@ -47,12 +48,21 @@ def comparison_test(data_dicts,input_set,
             if verbose:
                 print('Starting ETL process')
             etl_proc = subprocess.Popen([solution_python_executor,
-                            slash.join(['solutions',solution,'ETL.py'])],stdout=subprocess.PIPE)
+                            slash.join(['solutions',solution,'ETL.py'])],stderr=subprocess.PIPE)
             if verbose:
                 print('ETL process started')
           
+            running_time = 0
             while etl_proc.poll() is None:
                 time.sleep(3)
+                running_time += 3
+                if (running_time >= 60) and (running_time % 10) == 0:
+                    print('ETL process taking over %d seconds' % running_time)
+            if etl_proc.poll() != 0:
+                print('error in ETL')
+                print(etl_proc.stderr.read().decode('utf-8'))
+                raise(RuntimeError)
+                
             if verbose:
                 print('ETL process done')
             
